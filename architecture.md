@@ -1,144 +1,148 @@
+### Swintus assistant
+
+```mermaid
 classDiagram
-%% --- Интерфейсы ---
-interface TurnValidator {
-+ validate(turn: Turn, state: GameState): ValidationResult
-}
-
-    interface StatsService {
-        + updateRatings(gameRecord: GameRecord): List~PlayerProfile~
-        + getLeaderboard(): List~PlayerProfile~
-        + computePlayerStatistics(playerId: UUID): PlayerProfile
-    }
-
-    interface GameRepository {
-        + saveGameState(state: GameState)
-        + loadGameState(gameId: UUID): GameState?
-        + saveTurn(turn: Turn)
-        + getTurnHistory(gameId: UUID): List~Turn~
-        + getAllGameRecords(): List~GameRecord~
-    }
-
-    interface GameAdministrator {
-        + startNewGame(players: List~PlayerProfile~): GameState
-        + processTurn(turn: Turn): ValidationResult
-        + undoLastTurn(): GameState
-        + getHistory(): List~Turn~
-    }
-
-    interface Pile {
-        + draw(): Card
-        + push(card: Card)
-        + top(): Card
-        + isEmpty(): Boolean
-        + reshuffleFrom(pile: Pile)
-    }
-
-    interface CardMatcher {
-        + matches(card: Card, topCard: Card, calledColor: Color?): Boolean
-    }
-
-    %% --- Реализации (конкретные классы) ---
-    class DefaultGameAdministrator {
+    class GameAdministrator {
         - GameState currentState
         - TurnValidator validator
         - GameRepository repository
         - StatsService statsService
-        + startNewGame(...)
-        + processTurn(...)
-        + undoLastTurn()
-        + getHistory()
+        + startNewGame(players) GameState
+        + processTurn(turn) ValidationResult
+        + undoLastTurn() GameState
+        + getHistory() List~Turn~
     }
-    DefaultGameAdministrator ..|> GameAdministrator
 
-    class StandardSwintusValidator {
-        - CardMatcher cardMatcher
-        + validate(turn, state)
-        - validatePlayCard(...)
-        - validateDrawCard(...)
-        - validateDeclareSwintus(...)
+    class GameState {
+        + UUID gameId
+        + List~InGamePlayer~ players
+        + DrawPile drawPile
+        + DiscardPile discardPile
+        + int currentPlayerIndex
+        + int turnNumber
+        + GameStatus status
+        + Card topCard
+        + applyTurn(turn) GameState
+        + getCurrentPlayer() InGamePlayer
     }
-    StandardSwintusValidator ..|> TurnValidator
 
-    class InMemoryStatsService {
-        - MutableMap~UUID, PlayerProfile~ profiles
-        - MutableList~GameRecord~ games
-        + updateRatings(...)
-        + getLeaderboard()
-        + computePlayerStatistics(...)
+    class InGamePlayer {
+        + UUID playerId
+        + String name
+        + List~Card~ hand
+        + boolean declaredSwintus
+        + void drawCards(int count, DrawPile pile)
+        + boolean canPlayCard(Card topCard)
     }
-    InMemoryStatsService ..|> StatsService
-
-    class FileGameRepository {
-        - String storagePath
-        + saveGameState(...)
-        + loadGameState(...)
-        + saveTurn(...)
-        + getTurnHistory(...)
-        + getAllGameRecords(...)
-    }
-    FileGameRepository ..|> GameRepository
-
-    class InMemoryGameRepository {
-        - MutableMap~UUID, GameState~ states
-        - MutableMap~UUID, MutableList~Turn~~ history
-        + ... реализации
-    }
-    InMemoryGameRepository ..|> GameRepository
 
     class DrawPile {
         - Stack~Card~ cards
-        + draw()
-        + push(card) // не используется напрямую
-        + top()
-        + isEmpty()
-        + reshuffleFrom(pile: Pile)
+        + draw() Card
+        + reshuffle(DiscardPile)
     }
-    DrawPile ..|> Pile
 
     class DiscardPile {
         - Stack~Card~ cards
-        + draw() // обычно не используется
-        + push(card)
-        + top()
-        + isEmpty()
-        + reshuffleFrom(pile) // не нужно для сброса
+        + push(card Card)
+        + top() Card
     }
-    DiscardPile ..|> Pile
 
-    class DefaultCardMatcher {
-        + matches(card, topCard, calledColor)
+    class Card {
+        <<abstract>>
+        + CardType type
+        + Color color
+        + int value
     }
-    DefaultCardMatcher ..|> CardMatcher
 
-    %% --- Остальные классы без изменений ---
-    class GameState { ... }
-    class InGamePlayer { ... }
-    class Turn { ... }
-    class PlayCardTurn { ... }
-    class DrawCardTurn { ... }
-    class DeclareSwintusTurn { ... }
-    class ValidationResult { ... }
-    class Card { ... }
-    class NumberCard { ... }
-    class TakeTwoCard { ... }
-    class ReverseCard { ... }
-    class SkipCard { ... }
-    class WildCard { ... }
-    class WildTakeFourCard { ... }
-    class PlayerProfile { ... }
-    class GameRecord { ... }
-    class PlayerResult { ... }
+    class NumberCard {
+        + int number
+    }
 
-    %% --- Зависимости (через интерфейсы) ---
-    DefaultGameAdministrator --> TurnValidator : depends on
-    DefaultGameAdministrator --> GameRepository : depends on
-    DefaultGameAdministrator --> StatsService : depends on
+    class TakeTwoCard { }
+    class ReverseCard { }
+    class SkipCard { }
+    class WildCard { }
+    class WildTakeFourCard { }
 
-    StandardSwintusValidator --> CardMatcher : uses
+    Card <|-- NumberCard
+    Card <|-- TakeTwoCard
+    Card <|-- ReverseCard
+    Card <|-- SkipCard
+    Card <|-- WildCard
+    Card <|-- WildTakeFourCard
 
-    GameState *-- DrawPile
-    GameState *-- DiscardPile
-    GameState *-- InGamePlayer
+    class Turn {
+        <<abstract>>
+        + UUID gameId
+        + int turnNumber
+        + UUID playerId
+        + LocalDateTime timestamp
+    }
+
+    class PlayCardTurn {
+        + Card card
+        + Color declaredColor
+        + boolean declaredSwintus
+    }
+
+    class DrawCardTurn {
+        + int cardsDrawn
+        + Card playedAfterDraw
+    }
+
+    class DeclareSwintusTurn {
+    }
+
+    Turn <|-- PlayCardTurn
+    Turn <|-- DrawCardTurn
+    Turn <|-- DeclareSwintusTurn
+
+    class TurnValidator {
+        + validate(turn, state) ValidationResult
+        - validatePlayCard(turn, state)
+        - validateDrawCard(turn, state)
+        - validateDeclareSwintus(turn, state)
+    }
+
+    class ValidationResult {
+        + boolean isValid
+        + String errorMessage
+    }
+
+    class GameRepository {
+        <<interface>>
+        + saveGameState(state)
+        + loadGameState(gameId)
+        + saveTurn(turn)
+        + getTurnHistory(gameId)
+    }
+
+    class StatsService {
+        + updateRatings(gameRecord)
+        + getLeaderboard()
+    }
+
+    class PlayerProfile {
+        + UUID id
+        + String username
+        + int rating
+        + int gamesPlayed
+        + int wins
+    }
+
+    GameAdministrator "1" --> "1" GameState
+    GameAdministrator "1" --> "1" TurnValidator
+    GameAdministrator "1" --> "1" GameRepository
+    GameAdministrator "1" --> "1" StatsService
+
+    GameState "1" *-- "*" InGamePlayer
+    GameState "1" *-- "1" DrawPile
+    GameState "1" *-- "1" DiscardPile
+
+    InGamePlayer "1" *-- "*" Card
 
     TurnValidator ..> Turn : validates
     Turn --> GameState : applied to
+
+    StatsService ..> GameRepository : uses
+    StatsService ..> PlayerProfile : updates
