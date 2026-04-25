@@ -1,37 +1,38 @@
 classDiagram
 class Turn {
 <<abstract>>
-+ UUID gameId
-+ int turnNumber
-+ UUID playerId
-+ LocalDateTime timestamp
++gameId
++turnNumber
++playerId
++timestamp
 }
 
     class PlayCardTurn {
-        + Card cardcg
-        + Color declaredColor
-        + boolean declaredSwintus
+        +card
+        +declaredColor
+        +declaredSwintus
     }
 
     class DrawCardTurn {
-        + int cardsDrawn
-        + Card playedAfterDraw
+        +cardsDrawn
+        +playedAfterDraw
     }
 
     class DeclareSwintusTurn {
     }
 
     class ValidationResult {
-        + boolean isValid
-        + String errorMessage
+        +isValid
+        +errorMessage
     }
 
     Turn <|-- PlayCardTurn
     Turn <|-- DrawCardTurn
     Turn <|-- DeclareSwintusTurn
 
-    interface TurnValidator {
-        + validate(turn,state) ValidationResult
+    class TurnValidator {
+        <<interface>>
+        +validate(turn,state)
     }
 
     TurnValidator ..> Turn : validates

@@ -1,21 +1,18 @@
-# Диаграммы классов для игры «Свинтус»
-
-```mermaid
 classDiagram
-    class GameAdministrator {
-        - GameState currentState
-        - TurnValidator validator
-        - GameRepository repository
-        - StatsService statsService
-        + startNewGame(players) GameState
-        + processTurn(turn) ValidationResult
-        + undoLastTurn() GameState
-        + getHistory() List~Turn~
-    }
+class GameAdministrator {
+- GameState currentState
+- TurnValidator validator
+- GameRepository repository
+- StatsService statsService
++ startNewGame(players) GameState
++ processTurn(turn) ValidationResult
++ undoLastTurn() GameState
++ getHistory() List
+}
 
     class GameState {
         + UUID gameId
-        + List~InGamePlayer~ players
+        + List players
         + GiveCard giveCard
         + DiscardCard discardCard
         + int currentPlayerIndex
@@ -34,11 +31,13 @@ classDiagram
         + int wins
     }
 
-    interface TurnValidator {
-        + validate(turn,state) ValidationResult
+    class TurnValidator {
+        <<interface>>
+        + validate(turn, state) ValidationResult
     }
 
-    interface GameRepository {
+    class GameRepository {
+        <<interface>>
         + saveGameState(state)
         + loadGameState(gameId)
         + saveTurn(turn)
@@ -46,16 +45,17 @@ classDiagram
         + getAllGameRecords()
     }
 
-    interface StatsService {
+    class StatsService {
+        <<interface>>
         + updateRatings(gameRecord)
         + getLeaderboard()
     }
 
-    GameAdministrator "1" --> "1" GameState
-    GameAdministrator "1" --> "1" TurnValidator
-    GameAdministrator "1" --> "1" GameRepository
-    GameAdministrator "1" --> "1" StatsService
+    GameAdministrator --> GameState
+    GameAdministrator --> TurnValidator
+    GameAdministrator --> GameRepository
+    GameAdministrator --> StatsService
 
-    StatsService ..> GameRepository : uses
-    StatsService ..> PlayerProfile : updates
-    GameState --> PlayerProfile : refers via InGamePlayer
+    StatsService ..> GameRepository
+    StatsService ..> PlayerProfile
+    GameState --> PlayerProfile
