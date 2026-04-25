@@ -1,33 +1,23 @@
 classDiagram
-class Card {
-<<abstract>>
-+ CardType type
-+ Color color
-+ int value
-}
+    class Card {
+       <<abstract>>
+        + color: Color
+        + effect: Effect?
+        + applyEffect(player, gameState)
+    }
 
     class NumberCard {
-        + int number
-    }
-
-    class TakeTwoCard {
-    }
-
-    class ReverseCard {
-    }
-
-    class SkipCard {
+        + value: int
     }
 
     class WildCard {
+        + chosenColor: Color
     }
 
-    class WildTakeFourCard {
+    class Effect {
+        <<interface>>
+        + execute(player, gameState)
     }
 
-    Card <|-- NumberCard
-    Card <|-- TakeTwoCard
-    Card <|-- ReverseCard
-    Card <|-- SkipCard
-    Card <|-- WildCard
-    Card <|-- WildTakeFourCard
+    class TakeTwoEffect {
+        + execute(player, gameState)

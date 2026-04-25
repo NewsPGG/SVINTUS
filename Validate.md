@@ -1,11 +1,11 @@
 classDiagram
-class Turn {
-<<abstract>>
-+gameId
-+turnNumber
-+playerId
-+timestamp
-}
+    class Turn {
+        <<abstract>>
+        +gameId
+        +turnNumber
+        +playerId
+        +timestamp
+    }
 
     class PlayCardTurn {
         +card
@@ -35,5 +35,5 @@ class Turn {
         +validate(turn,state)
     }
 
-    TurnValidator ..> Turn : validates
-    TurnValidator ..> ValidationResult : returns
+    TurnValidator ..> Turn
+    TurnValidator ..> ValidationResult

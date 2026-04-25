@@ -1,14 +1,15 @@
 classDiagram
-class GameAdministrator {
-- GameState currentState
-- TurnValidator validator
-- GameRepository repository
-- StatsService statsService
-+ startNewGame(players) GameState
-+ processTurn(turn) ValidationResult
-+ undoLastTurn() GameState
-+ getHistory() List
-}
+    class GameAdministrator {
+        - GameState currentState
+        - IGameStateLogic stateLogic
+        - TurnValidator validator
+        - GameRepository repository
+        - StatsService statsService
+        + startNewGame(players) GameState
+        + processTurn(turn) ValidationResult
+        + undoLastTurn() GameState
+        + getHistory() List
+    }
 
     class GameState {
         + UUID gameId
@@ -19,8 +20,12 @@ class GameAdministrator {
         + int turnNumber
         + GameStatus status
         + Card topCard
-        + applyTurn(turn) GameState
-        + getCurrentPlayer() InGamePlayer
+    }
+
+    class IGameStateLogic {
+        <<interface>>
+        + applyTurn(turn, GameState) GameState
+        + getCurrentPlayer(GameState) InGamePlayer
     }
 
     class PlayerProfile {
@@ -52,10 +57,13 @@ class GameAdministrator {
     }
 
     GameAdministrator --> GameState
+    GameAdministrator --> IGameStateLogic
     GameAdministrator --> TurnValidator
     GameAdministrator --> GameRepository
     GameAdministrator --> StatsService
 
     StatsService ..> GameRepository
     StatsService ..> PlayerProfile
+
     GameState --> PlayerProfile
+    IGameStateLogic ..> GameState

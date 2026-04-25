@@ -1,16 +1,16 @@
 classDiagram
-class GameState {
-+ UUID gameId
-+ List~InGamePlayer~ players
-+ GiveCard giveCard
-+ DiscardCard discardCard
-+ int currentPlayerIndex
-+ int turnNumber
-+ GameStatus status
-+ Card topCard
-+ applyTurn(turn) GameState
-+ getCurrentPlayer() InGamePlayer
-}
+    class GameState {
+        + UUID gameId
+        + List~InGamePlayer~ players
+        + GiveCard giveCard
+        + DiscardCard discardCard
+        + int currentPlayerIndex
+        + int turnNumber
+        + GameStatus status
+        + Card topCard
+        + applyTurn(turn) GameState
+        + getCurrentPlayer() InGamePlayer
+    }
 
     class InGamePlayer {
         + UUID playerId
