@@ -10,7 +10,6 @@ class TakeThreeEffect : Effect {
                 player.hand.add(gameState.giveCard.draw())
             }
         }
-        // Наказанный игрок также пропускает ход
         gameState.skipNextTurn = true
     }
 }

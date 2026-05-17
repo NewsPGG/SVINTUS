@@ -20,7 +20,6 @@ class GameAdministrator {
             InGamePlayer(profile).apply { hand = mutableListOf() }
         }.toMutableList()
 
-        // Создаем честную колоду Свинтуса на 104 карты
         val fullDeck = createSwintusDeck()
         val giveCard = GiveCard().apply {
             cards = Stack<Card>()
@@ -29,14 +28,10 @@ class GameAdministrator {
 
         val discardCard = DiscardCard().apply { cards = Stack<Card>() }
 
-        // Раздаем игрокам по 8 карт на руку (для 2 игроков это 16 карт)
         players.forEach { it.drawCards(8, giveCard) }
 
-        // Вытаскиваем первую карту для стола. Она должна быть обычной цифровой.
         var firstCard = giveCard.draw()
 
-        // Фикс "потерянных" карт: вместо ломающего структуру .add(0, ...)
-        // используем родной .push() и заново перемешиваем колоду, если вылез спец-эффект.
         while (firstCard is WildCard || firstCard is ActionCard) {
             giveCard.cards.push(firstCard)
             giveCard.cards.shuffle()
@@ -99,44 +94,37 @@ class GameAdministrator {
                     is SkipEffect -> "ЗАХРАПИН"
                     is ReverseEffect -> "ПЕРЕХРЮК"
                     is TakeThreeEffect -> "ХАПЕЖ"
-                    is TakeTwoEffect -> "УНО-ХАПЕЖ"
+                    is TakeTwoEffect -> "СВИНТУС"
                     else -> "ЭФФЕКТ"
                 }
                 "${card.color} [$effectName]"
             }
-            is WildCard -> "ПОЛИПЕЦ (Цвет: ${card.chosenColor})"
+            is WildCard -> "ПОЛИСВИН (Цвет: ${card.chosenColor})"
             else -> "Неизвестная карта"
         }
     }
 
-    /**
-     * Генерация оригинальной колоды Свинтуса (ровно 104 карты)
-     */
     private fun createSwintusDeck(): List<Card> {
         val deck = mutableListOf<Card>()
         val colors = listOf(Color.RED, Color.GREEN, Color.BLUE, Color.YELLOW)
 
-        // Каждая карта масти (цифры и спец-эффекты) встречается в колоде ровно ДВАЖДЫ
         repeat(2) {
             for (color in colors) {
-                // 1. Цифровые карты от 0 до 7 (все удваиваются, включая 0) -> 64 карты
                 for (value in 0..7) {
                     deck.add(NumberCard(color, value))
                 }
 
-                // 2. Карты предписаний (спец-эффекты масти) -> 24 карты
-                deck.add(ActionCard(color, SkipEffect()))       // Захрапин
-                deck.add(ActionCard(color, ReverseEffect()))    // Перехрюк
-                deck.add(ActionCard(color, TakeThreeEffect()))  // Хапеж (3 карты)
+                deck.add(ActionCard(color, SkipEffect()))
+                deck.add(ActionCard(color, ReverseEffect()))
+                deck.add(ActionCard(color, TakeThreeEffect()))
             }
         }
 
-        // 3. Дикие карты (Полипец) — ровно 8 штук на колоду -> 16 карт
         repeat(8) {
             deck.add(WildCard(Color.GRAY, Color.GRAY))
         }
 
-        println("ГЕНЕРАЦИЯ: Создана колода Свинтуса. Всего карт: ${deck.size} шт.")
+        println("Создана колода Свинтуса. Всего карт: ${deck.size} шт.")
         return deck
     }
 }

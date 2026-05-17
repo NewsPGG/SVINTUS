@@ -40,7 +40,6 @@ class GameStateLogic(private val currentState: GameState) : IGameStateLogic {
                 (it !is NumberCard || (turn.card is NumberCard && it.value == turn.card.value)) }
         if (cardInHand != null) workingHand.remove(cardInHand) else workingHand.remove(turn.card)
 
-        // ЖЁСТКИЙ ВЫХОД ДЛЯ ПОБЕДИТЕЛЯ
         if (workingHand.isEmpty()) {
             currentState.discardCard.push(currentState.topCard)
             val playedCard = turn.card
@@ -50,7 +49,7 @@ class GameStateLogic(private val currentState: GameState) : IGameStateLogic {
             return currentState.copy(
                 players = updatePlayersInList(currentState.players, player.playerId, workingHand),
                 topCard = playedCard,
-                gameStatus = false // Переключаем флаг активности игры
+                gameStatus = false
             )
         }
 

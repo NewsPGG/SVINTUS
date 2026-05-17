@@ -1,10 +1,8 @@
 package Validator
 
-import Cards.Card
 import Cards.Types.ActionCard
 import Cards.Types.NumberCard
 import Cards.Types.WildCard
-import Game.Color
 import Game.GameState
 import Validator.TurnActions.DeclareSwintusTurn
 import Validator.TurnActions.DrawCardTurn
@@ -34,7 +32,6 @@ class DefaultTurnValidator : TurnValidator {
             return ValidationResult(false, "Карта не может быть сброшена!")
         }
 
-        // Разрешаем ход, чтобы во ViewModel зафиксировать, крикнул игрок или нет
         return ValidationResult(true, null)
     }
 
