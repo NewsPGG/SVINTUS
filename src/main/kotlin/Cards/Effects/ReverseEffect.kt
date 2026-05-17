@@ -3,8 +3,14 @@ package Cards.Effects
 import Game.GameState
 import Game.InGamePlayer
 
-class ReverseEffect: Effect {
+class ReverseEffect : Effect {
     override fun execute(player: InGamePlayer, gameState: GameState) {
-        gameState.direction = !gameState.direction
+        if (gameState.players.size == 2) {
+            // На двоих игроков Перехрюк работает как Захрапин
+            gameState.skipNextTurn = true
+        } else {
+            // В большой компании просто меняет направление числового ряда
+            gameState.direction = !gameState.direction
+        }
     }
 }

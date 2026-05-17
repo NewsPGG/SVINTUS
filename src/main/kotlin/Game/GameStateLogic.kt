@@ -1,93 +1,172 @@
 package Game
 
+import Cards.Card
+import Cards.Effects.ReverseEffect
+import Cards.Effects.SkipEffect
+import Cards.Effects.TakeThreeEffect
+import Cards.Effects.TakeTwoEffect
 import Cards.Types.*
 import Validator.TurnActions.*
 
-class GameStateLogic(private var gameState: GameState) : IGameStateLogic {
+class GameStateLogic(private val currentState: GameState) : IGameStateLogic {
 
     override fun applyTurn(turn: Turn): GameState {
-        val player = gameState.players.find { it.playerId == turn.playerId.playerId }
-            ?: return gameState
+        val player = currentState.players.find { it.playerId == turn.playerId.playerId }
+            ?: return currentState
 
-        when (turn) {
-            is PlayCardTurn -> applyPlayCardTurn(turn, player)
-            is DrawCardTurn -> applyDrawCardTurn(turn, player)
-            is DeclareSwintusTurn -> applyDeclareSwintusTurn(turn, player)
+        return when (turn) {
+            is PlayCardTurn -> computePlayCardTurn(turn, player)
+            is DrawCardTurn -> computeDrawCardTurn(turn, player)
+            is DeclareSwintusTurn -> computeDeclareSwintusTurn(turn, player)
+            else -> currentState
         }
-
-        return gameState
     }
 
     override fun getCurrentPlayer(gameState: GameState): InGamePlayer {
         return gameState.players[gameState.currentPlayerIndex]
     }
 
-    private fun applyPlayCardTurn(turn: PlayCardTurn, player: InGamePlayer) {
-        if (turn.declaredSwintus && player.hand.size > 2) {
-            applyPenalty(player, 3)
-            advanceTurn()
-            return
+    private fun computePlayCardTurn(turn: PlayCardTurn, player: InGamePlayer): GameState {
+        var workingHand = player.hand.toMutableList()
+
+        if (turn.declaredSwintus && workingHand.size > 2) {
+            workingHand = applyPenaltyToHand(workingHand, 3)
+            return advanceTurnInState(currentState.copy(
+                players = updatePlayersInList(currentState.players, player.playerId, workingHand)
+            ), stepsToSkip = 0)
         }
 
-        if (!turn.declaredSwintus && player.hand.size == 2) {
-            applyPenalty(player, 2)
+        val cardInHand = workingHand.find { it::class == turn.card::class && it.color == turn.card.color &&
+                (it !is NumberCard || (turn.card is NumberCard && it.value == turn.card.value)) }
+        if (cardInHand != null) workingHand.remove(cardInHand) else workingHand.remove(turn.card)
+
+        // ЖЁСТКИЙ ВЫХОД ДЛЯ ПОБЕДИТЕЛЯ
+        if (workingHand.isEmpty()) {
+            currentState.discardCard.push(currentState.topCard)
+            val playedCard = turn.card
+            if (playedCard is WildCard) {
+                playedCard.chosenColor = turn.declaredColor
+            }
+            return currentState.copy(
+                players = updatePlayersInList(currentState.players, player.playerId, workingHand),
+                topCard = playedCard,
+                gameStatus = false // Переключаем флаг активности игры
+            )
         }
 
-        player.hand.remove(turn.card)
-
-        if (turn.card is WildCard) {
-            turn.card.chosenColor = turn.declaredColor
+        val playedCard = turn.card
+        if (playedCard is WildCard) {
+            playedCard.chosenColor = turn.declaredColor
         }
 
-        gameState.discardCard.push(gameState.topCard)
-        gameState.topCard = turn.card
+        currentState.discardCard.push(currentState.topCard)
+        var nextState = currentState.copy(
+            players = updatePlayersInList(currentState.players, player.playerId, workingHand),
+            topCard = playedCard
+        )
 
-        val indexBefore = gameState.currentPlayerIndex
-        val directionBefore = gameState.direction
+        var stepsToSkip = 0
+        if (playedCard is ActionCard) {
+            val effect = playedCard.effect
+            val size = nextState.players.size
+            val step = if (nextState.direction) 1 else -1
+            val nextPlayerIndex = (nextState.currentPlayerIndex + step + size) % size
+            val targetPlayer = nextState.players[nextPlayerIndex]
 
-        turn.card.applyEffect(player, gameState)
+            var targetHand = targetPlayer.hand.toMutableList()
 
-        if (player.hand.isEmpty()) {
-            gameState.gameStatus = false
-        } else {
-            val indexAfter = gameState.currentPlayerIndex
-            val directionAfter = gameState.direction
+            when (effect) {
+                is SkipEffect -> stepsToSkip = 1
+                is TakeThreeEffect -> {
+                    targetHand = applyPenaltyToHand(targetHand, 3)
+                    nextState = nextState.copy(players = updatePlayersInList(nextState.players, targetPlayer.playerId, targetHand))
+                    stepsToSkip = 1
+                }
+                is TakeTwoEffect -> {
+                    targetHand = applyPenaltyToHand(targetHand, 2)
+                    nextState = nextState.copy(players = updatePlayersInList(nextState.players, targetPlayer.playerId, targetHand))
+                    stepsToSkip = 1
+                }
+                is ReverseEffect -> {
+                    nextState = nextState.copy(direction = !nextState.direction)
+                    stepsToSkip = if (size == 2) 1 else 0
+                }
+            }
+        }
 
-            if (indexAfter == indexBefore && directionAfter == directionBefore) {
-                advanceTurn()
-            } else {
-                gameState.turnNumber += 1
+        return advanceTurnInState(nextState, stepsToSkip)
+    }
+
+    private fun computeDrawCardTurn(turn: DrawCardTurn, player: InGamePlayer): GameState {
+        ensureDeckIsNotEmpty()
+
+        if (currentState.giveCard.cards.isNotEmpty()) {
+            val workingHand = player.hand.toMutableList()
+            workingHand.add(currentState.giveCard.draw(currentState.discardCard))
+
+            return currentState.copy(
+                players = updatePlayersInList(currentState.players, player.playerId, workingHand),
+                turnNumber = currentState.turnNumber + 1
+            )
+        }
+        return advanceTurnInState(currentState, stepsToSkip = 0)
+    }
+
+    private fun computeDeclareSwintusTurn(turn: DeclareSwintusTurn, player: InGamePlayer): GameState {
+        val updatedPlayers = currentState.players.map { p ->
+            if (p.playerId == player.playerId) {
+                p.declaredSwintus = true
+            }
+            p
+        }.toMutableList()
+        return currentState.copy(players = updatedPlayers)
+    }
+
+    private fun ensureDeckIsNotEmpty() {
+        if (currentState.giveCard.cards.isEmpty()) {
+            val discardedPile = currentState.discardCard.cards
+            if (discardedPile.size > 0) {
+                val recycledCards = mutableListOf<Card>()
+                while (discardedPile.size > 0) {
+                    recycledCards.add(discardedPile.pop())
+                }
+                recycledCards.shuffle()
+                currentState.giveCard.cards.addAll(recycledCards)
             }
         }
     }
 
-    private fun applyDrawCardTurn(turn: DrawCardTurn, player: InGamePlayer) {
-        repeat(turn.cardsDrawn) {
-            if (isDeckReady()) {
-                player.hand.add(gameState.giveCard.draw())
-            }
-        }
-    }
-
-    private fun applyDeclareSwintusTurn(turn: DeclareSwintusTurn, player: InGamePlayer) {
-        player.declaredSwintus = true
-    }
-
-    private fun applyPenalty(player: InGamePlayer, count: Int) {
+    private fun applyPenaltyToHand(hand: List<Card>, count: Int): MutableList<Card> {
+        val newHand = hand.toMutableList()
         repeat(count) {
-            if (isDeckReady()) {
-                player.hand.add(gameState.giveCard.draw())
+            ensureDeckIsNotEmpty()
+            if (currentState.giveCard.cards.isNotEmpty()) {
+                newHand.add(currentState.giveCard.draw(currentState.discardCard))
             }
         }
+        return newHand
     }
 
-    private fun isDeckReady(): Boolean = gameState.giveCard.cards.isNotEmpty()
+    private fun updatePlayersInList(players: List<InGamePlayer>, id: java.util.UUID, newHand: List<Card>): MutableList<InGamePlayer> {
+        return players.map { p ->
+            if (p.playerId == id) {
+                p.hand = newHand.toMutableList()
+            }
+            p
+        }.toMutableList()
+    }
 
-    private fun advanceTurn() {
-        val size = gameState.players.size
-        if (size == 0) return
-        val step = if (gameState.direction) 1 else -1
-        gameState.currentPlayerIndex = (gameState.currentPlayerIndex + step + size) % size
-        gameState.turnNumber += 1
+    private fun advanceTurnInState(state: GameState, stepsToSkip: Int): GameState {
+        val size = state.players.size
+        if (size == 0) return state
+
+        val step = if (state.direction) 1 else -1
+        val totalSteps = 1 + stepsToSkip
+        val newPlayerIndex = (state.currentPlayerIndex + (step * totalSteps) + size * totalSteps) % size
+
+        return state.copy(
+            currentPlayerIndex = newPlayerIndex,
+            turnNumber = state.turnNumber + 1
+        )
     }
 }

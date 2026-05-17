@@ -12,5 +12,6 @@ data class GameState (
     var turnNumber: Int,
     var gameStatus: Boolean,
     var topCard: Card,
-    var direction: Boolean = true
+    var direction: Boolean = true,
+    var skipNextTurn: Boolean = false
 )

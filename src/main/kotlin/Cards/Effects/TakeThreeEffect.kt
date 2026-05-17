@@ -3,8 +3,14 @@ package Cards.Effects
 import Game.GameState
 import Game.InGamePlayer
 
-class TakeThreeEffect: Effect {
+class TakeThreeEffect : Effect {
     override fun execute(player: InGamePlayer, gameState: GameState) {
-        player.drawCards(3, gameState.giveCard)
+        repeat(3) {
+            if (gameState.giveCard.cards.isNotEmpty()) {
+                player.hand.add(gameState.giveCard.draw())
+            }
+        }
+        // Наказанный игрок также пропускает ход
+        gameState.skipNextTurn = true
     }
 }

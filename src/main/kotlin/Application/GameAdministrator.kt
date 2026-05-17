@@ -20,6 +20,7 @@ class GameAdministrator {
             InGamePlayer(profile).apply { hand = mutableListOf() }
         }.toMutableList()
 
+        // Создаем честную колоду Свинтуса на 104 карты
         val fullDeck = createSwintusDeck()
         val giveCard = GiveCard().apply {
             cards = Stack<Card>()
@@ -28,11 +29,17 @@ class GameAdministrator {
 
         val discardCard = DiscardCard().apply { cards = Stack<Card>() }
 
+        // Раздаем игрокам по 8 карт на руку (для 2 игроков это 16 карт)
         players.forEach { it.drawCards(8, giveCard) }
 
+        // Вытаскиваем первую карту для стола. Она должна быть обычной цифровой.
         var firstCard = giveCard.draw()
+
+        // Фикс "потерянных" карт: вместо ломающего структуру .add(0, ...)
+        // используем родной .push() и заново перемешиваем колоду, если вылез спец-эффект.
         while (firstCard is WildCard || firstCard is ActionCard) {
-            giveCard.cards.add(0, firstCard)
+            giveCard.cards.push(firstCard)
+            giveCard.cards.shuffle()
             firstCard = giveCard.draw()
         }
 
@@ -48,7 +55,7 @@ class GameAdministrator {
         )
 
         logic = GameStateLogic(gameState)
-        println("--- Игра успешно инициализирована ---")
+        println("--- Игра успешно инициализирована (В колоде осталось: ${giveCard.cards.size} к.) ---")
     }
 
     fun processTurn(turn: Turn): String? {
@@ -69,7 +76,6 @@ class GameAdministrator {
         return null
     }
 
-    // Тот самый метод, который искал main
     fun printGameState() {
         val currentPlayer = gameState.players[gameState.currentPlayerIndex]
 
@@ -92,8 +98,8 @@ class GameAdministrator {
                 val effectName = when(card.effect) {
                     is SkipEffect -> "ЗАХРАПИН"
                     is ReverseEffect -> "ПЕРЕХРЮК"
-                    is TakeTwoEffect -> "ХАПЕЖ"
-                    is TakeThreeEffect -> "ХАПЕЖ (3)"
+                    is TakeThreeEffect -> "ХАПЕЖ"
+                    is TakeTwoEffect -> "УНО-ХАПЕЖ"
                     else -> "ЭФФЕКТ"
                 }
                 "${card.color} [$effectName]"
@@ -103,21 +109,34 @@ class GameAdministrator {
         }
     }
 
+    /**
+     * Генерация оригинальной колоды Свинтуса (ровно 104 карты)
+     */
     private fun createSwintusDeck(): List<Card> {
         val deck = mutableListOf<Card>()
         val colors = listOf(Color.RED, Color.GREEN, Color.BLUE, Color.YELLOW)
-        for (color in colors) {
-            for (i in 0..9) {
-                deck.add(NumberCard(color, i))
-                if (i != 0) deck.add(NumberCard(color, i))
-            }
-            repeat(2) {
-                deck.add(ActionCard(color, SkipEffect()))
-                deck.add(ActionCard(color, ReverseEffect()))
-                deck.add(ActionCard(color, TakeTwoEffect()))
+
+        // Каждая карта масти (цифры и спец-эффекты) встречается в колоде ровно ДВАЖДЫ
+        repeat(2) {
+            for (color in colors) {
+                // 1. Цифровые карты от 0 до 7 (все удваиваются, включая 0) -> 64 карты
+                for (value in 0..7) {
+                    deck.add(NumberCard(color, value))
+                }
+
+                // 2. Карты предписаний (спец-эффекты масти) -> 24 карты
+                deck.add(ActionCard(color, SkipEffect()))       // Захрапин
+                deck.add(ActionCard(color, ReverseEffect()))    // Перехрюк
+                deck.add(ActionCard(color, TakeThreeEffect()))  // Хапеж (3 карты)
             }
         }
-        repeat(8) { deck.add(WildCard(Color.GRAY, Color.GRAY)) }
+
+        // 3. Дикие карты (Полипец) — ровно 8 штук на колоду -> 16 карт
+        repeat(8) {
+            deck.add(WildCard(Color.GRAY, Color.GRAY))
+        }
+
+        println("ГЕНЕРАЦИЯ: Создана колода Свинтуса. Всего карт: ${deck.size} шт.")
         return deck
     }
 }
