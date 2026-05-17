@@ -19,18 +19,24 @@ class GameIntegrationTests {
     @Test
     fun `Сценарий 1 - Успешный ход цифровой картой`() {
         val admin = setupGame(listOf("Игрок 1", "Игрок 2"))
-        val state = admin.gameState
-        val player = state.players[0]
+        val player = admin.gameState.players[0]
 
-        val validCard = NumberCard(state.topCard.color, 7)
+        val validCard = NumberCard(admin.gameState.topCard.color, 7)
         player.hand.add(validCard)
 
-        val turn = PlayCardTurn(state.gameId, 1, player, validCard, validCard.color, false)
+        val turn = PlayCardTurn(admin.gameState.gameId, 1, player, validCard, validCard.color, false)
         val result = admin.processTurn(turn)
 
         assertNull(result)
-        assertEquals(validCard, state.topCard)
-        assertEquals(1, state.currentPlayerIndex)
+
+        val updatedState = admin.gameState
+
+        val currentTopCard = updatedState.topCard
+        assertTrue(currentTopCard is NumberCard, "На столе должна быть цифровая карта")
+        assertEquals(validCard.color, currentTopCard.color, "Цвет карты должен совпасть")
+        assertEquals(7, (currentTopCard as NumberCard).value, "Значение карты должно быть 7")
+
+        assertEquals(1, updatedState.currentPlayerIndex)
     }
 
     @Test
