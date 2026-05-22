@@ -2,32 +2,53 @@ import Application.GameAdministrator
 import Application.PlayerProfile
 import Cards.Types.WildCard
 import Game.Color
+import Game.InGamePlayer
+import Validator.TurnActions.Turn
 import Validator.TurnActions.DrawCardTurn
 import Validator.TurnActions.PlayCardTurn
 import java.util.Scanner
 import java.util.UUID
 
-fun mainConsole() {
-    val admin = GameAdministrator()
-    val scanner = Scanner(System.`in`)
+class ConsoleGameClient {
+    private val admin = GameAdministrator()
+    private val scanner = Scanner(System.`in`)
 
-    println("=== СВИНТУС-АДМИН ===")
+    fun start() {
+        println("=== СВИНТУС-АДМИН ===")
 
-    val profiles = mutableListOf<PlayerProfile>()
-    println("Сколько игроков будет в партии?")
-    val count = scanner.nextLine().toIntOrNull() ?: 2
+        val profiles = setupPlayers()
+        admin.startGame(profiles)
 
-    repeat(count) { i ->
-        println("Введите имя игрока ${i + 1}:")
-        val name = scanner.nextLine()
-        profiles.add(PlayerProfile(UUID.randomUUID(), name, 1000, 0, 0))
+        while (admin.gameState.gameStatus) {
+            admin.printGameState()
+
+            val turn = readTurnAction() ?: continue
+
+            val error = admin.processTurn(turn)
+            if (error != null) {
+                println("\nОШИБКА ВАЛИДАЦИИ: $error")
+            } else {
+                println("\nДействие обработано.")
+            }
+        }
+
+        println("Партия завершена. Спасибо за игру!")
     }
 
-    admin.startGame(profiles)
+    private fun setupPlayers(): List<PlayerProfile> {
+        println("Сколько игроков будет в партии?")
+        val count = scanner.nextLine().toIntOrNull() ?: 2
+        val profiles = mutableListOf<PlayerProfile>()
 
-    while (admin.gameState.gameStatus) {
-        admin.printGameState()
+        repeat(count) { i ->
+            println("Введите имя игрока ${i + 1}:")
+            val name = scanner.nextLine().trim()
+            profiles.add(PlayerProfile(UUID.randomUUID(), name, 1000, 0, 0))
+        }
+        return profiles
+    }
 
+    private fun readTurnAction(): Turn? {
         println("ДЕЙСТВИЕ:")
         println("Введите индекс карты (например: 3)")
         println("Добавьте ' s' если игрок кричит Свинтус (например: 3 s)")
@@ -37,33 +58,56 @@ fun mainConsole() {
         val input = rawInput[0].toIntOrNull() ?: -2
         val shouted = rawInput.size > 1 && rawInput[1].lowercase() == "s"
 
-        val currentPlayer = admin.gameState.players[admin.gameState.currentPlayerIndex]
+        val state = admin.gameState
+        val currentPlayer = state.players[state.currentPlayerIndex]
 
-        val turn = if (input == -1) {
-            DrawCardTurn(admin.gameState.gameId, admin.gameState.turnNumber, currentPlayer, 1, false)
-        } else if (input in 0 until currentPlayer.hand.size) {
-            val card = currentPlayer.hand[input]
-
-            var chosenColor = card.color
-            if (card is WildCard) {
-                println("Выберите цвет (RED, GREEN, BLUE, YELLOW):")
-                chosenColor = try { Color.valueOf(scanner.nextLine().uppercase()) } catch(e: Exception) { Color.RED }
+        return when {
+            input == -1 -> {
+                DrawCardTurn(state.gameId, state.turnNumber, currentPlayer, 1, false)
             }
-
-            PlayCardTurn(admin.gameState.gameId, admin.gameState.turnNumber, currentPlayer, card, chosenColor, shouted)
-        } else {
-            println("Неверный ввод!")
-            continue
-        }
-
-        val result = admin.processTurn(turn)
-        if (result != null) {
-            println("\nОШИБКА ВАЛИДАЦИИ: $result")
-        } else {
-
-            println("\nДействие обработано.")
+            input in 0 until currentPlayer.hand.size -> {
+                buildPlayCardTurn(currentPlayer, input, shouted)
+            }
+            else -> {
+                println("Неверный ввод! Повторите попытку.")
+                null
+            }
         }
     }
 
-    println("Партия завершена. Спасибо за игру!")
+    private fun buildPlayCardTurn(player: InGamePlayer, cardIndex: Int, shouted: Boolean): PlayCardTurn {
+        val card = player.hand[cardIndex]
+        val state = admin.gameState
+
+        val chosenColor = if (card is WildCard) {
+            askForWildCardColor()
+        } else {
+            card.color
+        }
+
+        return PlayCardTurn(
+            gameId = state.gameId,
+            turnNumber = state.turnNumber,
+            playerId = player,
+            card = card,
+            declaredColor = chosenColor,
+            declaredSwintus = shouted
+        )
+    }
+
+    private fun askForWildCardColor(): Color {
+        while (true) {
+            println("Выберите цвет (RED, GREEN, BLUE, YELLOW):")
+            val inputColor = scanner.nextLine().uppercase().trim()
+            try {
+                return Color.valueOf(inputColor)
+            } catch (e: Exception) {
+                println("Некорректный цвет! Допустимы только: RED, GREEN, BLUE, YELLOW. Попробуйте еще раз.")
+            }
+        }
+    }
+}
+
+fun mainConsole() {
+    ConsoleGameClient().start()
 }
