@@ -29,239 +29,338 @@ import java.util.UUID
 fun LobbyScreen(viewModel: SwintusViewModel) {
     val lobbyPlayers = remember { mutableStateListOf<PlayerProfile>() }
     var newPlayerName by remember { mutableStateOf("") }
-    val darkBackground = Color(0xFF121824)
-    val cardBackground = Color(0xFF1E2638)
-    val accentOrange = Color(0xFFFF6B00)
-    val accentOrangeVariant = Color(0xFFFF8833)
-    val textLight = Color(0xFFE2E8F0)
-    val textMuted = Color(0xFF94A3B8)
-    val borderStrokeColor = Color(0xFF334155)
 
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(darkBackground)
+            .background(Color(0xFF121824))
             .padding(24.dp),
         contentAlignment = Alignment.Center
     ) {
         Card(
             shape = RoundedCornerShape(24.dp),
-            backgroundColor = cardBackground,
+            backgroundColor = Color(0xFF1E2638),
             elevation = 16.dp,
             modifier = Modifier
                 .width(480.dp)
                 .height(580.dp)
-                .border(1.dp, borderStrokeColor, RoundedCornerShape(24.dp))
+                .border(1.dp, Color(0xFF334155), RoundedCornerShape(24.dp))
         ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(32.dp),
-                verticalArrangement = Arrangement.SpaceBetween
-            ) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = "СВИНТУС",
-                        fontSize = 32.sp,
-                        fontWeight = FontWeight.Black,
-                        color = accentOrange,
-                        letterSpacing = 2.sp,
-                        modifier = Modifier.fillMaxWidth(),
-                        textAlign = TextAlign.Center
+            LobbyCardContent(
+                lobbyPlayers = lobbyPlayers,
+                newPlayerName = newPlayerName,
+                onNameChange = { newPlayerName = it },
+                onAddPlayer = {
+                    lobbyPlayers.add(
+                        PlayerProfile(
+                            id = UUID.randomUUID(),
+                            username = newPlayerName.trim(),
+                            rating = 0,
+                            gamesPlayed = 0,
+                            wins = 0
+                        )
                     )
-                    Text(
-                        text = "ПОДГОТОВКА К БИТВЕ",
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = textMuted,
-                        letterSpacing = 4.sp,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(bottom = 24.dp),
-                        textAlign = TextAlign.Center
-                    )
-
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        OutlinedTextField(
-                            value = newPlayerName,
-                            onValueChange = { newPlayerName = it },
-                            label = { Text("Имя нового игрока", color = textMuted) },
-                            colors = TextFieldDefaults.outlinedTextFieldColors(
-                                textColor = textLight,
-                                focusedBorderColor = accentOrange,
-                                unfocusedBorderColor = borderStrokeColor,
-                                cursorColor = accentOrange,
-                                focusedLabelColor = accentOrange
-                            ),
-                            shape = RoundedCornerShape(12.dp),
-                            modifier = Modifier.weight(1f),
-                            singleLine = true
-                        )
-                        Spacer(modifier = Modifier.width(12.dp))
-
-                        Button(
-                            onClick = {
-                                if (newPlayerName.isNotBlank() && lobbyPlayers.size < 8) {
-                                    lobbyPlayers.add(
-                                        PlayerProfile(
-                                            id = UUID.randomUUID(),
-                                            username = newPlayerName.trim(),
-                                            rating = 0,
-                                            gamesPlayed = 0,
-                                            wins = 0
-                                        )
-                                    )
-                                    newPlayerName = ""
-                                }
-                            },
-                            enabled = newPlayerName.isNotBlank() && lobbyPlayers.size < 8,
-                            colors = ButtonDefaults.buttonColors(
-                                backgroundColor = accentOrange,
-                                contentColor = Color.White,
-                                disabledBackgroundColor = borderStrokeColor
-                            ),
-                            shape = RoundedCornerShape(12.dp),
-                            modifier = Modifier.size(56.dp),
-                            contentPadding = PaddingValues(0.dp)
-                        ) {
-                            Icon(Icons.Default.Add, contentDescription = "Добавить")
-                        }
-                    }
-
-                    Spacer(modifier = Modifier.height(24.dp))
-
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            text = "Участники лобби",
-                            fontSize = 16.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = textLight
-                        )
-                        Text(
-                            text = "${lobbyPlayers.size} / 8",
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = if (lobbyPlayers.size >= 2) accentOrange else textMuted
-                        )
-                    }
-
-                    Spacer(modifier = Modifier.height(12.dp))
-
-                    if (lobbyPlayers.isEmpty()) {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .weight(1f),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(
-                                text = "Добавьте минимум 2 игроков, чтобы начать игру",
-                                color = textMuted,
-                                fontSize = 14.sp,
-                                textAlign = TextAlign.Center,
-                                modifier = Modifier.padding(horizontal = 16.dp)
-                            )
-                        }
-                    } else {
-                        LazyColumn(
-                            modifier = Modifier.weight(1f),
-                            verticalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            items(lobbyPlayers) { player ->
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .background(Color(0xFF263147), RoundedCornerShape(12.dp))
-                                        .border(1.dp, Color(0xFF2D3A54), RoundedCornerShape(12.dp))
-                                        .padding(horizontal = 16.dp, vertical = 12.dp),
-                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Row(verticalAlignment = Alignment.CenterVertically) {
-                                        Icon(
-                                            Icons.Default.Person,
-                                            contentDescription = null,
-                                            tint = accentOrange,
-                                            modifier = Modifier.size(20.dp)
-                                        )
-                                        Spacer(modifier = Modifier.width(12.dp))
-                                        Text(
-                                            text = player.username,
-                                            color = textLight,
-                                            fontWeight = FontWeight.Medium,
-                                            fontSize = 15.sp
-                                        )
-                                    }
-                                    IconButton(
-                                        onClick = { lobbyPlayers.remove(player) },
-                                        modifier = Modifier.size(24.dp)
-                                    ) {
-                                        Icon(
-                                            Icons.Default.Delete,
-                                            contentDescription = "Удалить",
-                                            tint = Color(0xFFEF4444)
-                                        )
-                                    }
-                                }
-                            }
-                        }
-                    }
+                    newPlayerName = ""
+                },
+                onRemovePlayer = { lobbyPlayers.remove(it) },
+                onStartGame = {
+                    val administrator = GameAdministrator()
+                    administrator.startGame(lobbyPlayers.toList())
+                    viewModel.startGameFromLobby(administrator.gameState)
                 }
-
-                Spacer(modifier = Modifier.height(24.dp))
-
-                val isButtonEnabled = lobbyPlayers.size >= 2
-
-                Button(
-                    onClick = {
-                        if (isButtonEnabled) {
-                            val administrator = GameAdministrator()
-                            administrator.startGame(lobbyPlayers.toList())
-                            viewModel.startGameFromLobby(administrator.gameState)
-                        }
-                    },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(54.dp),
-                    enabled = isButtonEnabled,
-                    shape = RoundedCornerShape(14.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        backgroundColor = Color.Transparent,
-                        disabledBackgroundColor = borderStrokeColor
-                    ),
-                    contentPadding = PaddingValues(0.dp)
-                ) {
-                    val buttonModifier = if (isButtonEnabled) {
-                        Modifier
-                            .fillMaxSize()
-                            .background(Brush.horizontalGradient(listOf(accentOrange, accentOrangeVariant)))
-                    } else {
-                        Modifier
-                            .fillMaxSize()
-                            .background(borderStrokeColor)
-                    }
-
-                    Box(
-                        modifier = buttonModifier,
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = "ПОЕХАЛИ!",
-                            fontSize = 16.sp,
-                            fontWeight = FontWeight.Black,
-                            color = if (isButtonEnabled) Color.White else textMuted,
-                            letterSpacing = 2.sp
-                        )
-                    }
-                }
-            }
+            )
         }
+    }
+}
+
+@Composable
+fun LobbyCardContent(
+    lobbyPlayers: List<PlayerProfile>,
+    newPlayerName: String,
+    onNameChange: (String) -> Unit,
+    onAddPlayer: () -> Unit,
+    onRemovePlayer: (PlayerProfile) -> Unit,
+    onStartGame: () -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(32.dp),
+        verticalArrangement = Arrangement.SpaceBetween
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            LobbyHeader()
+
+            PlayerInputField(
+                value = newPlayerName,
+                onValueChange = onNameChange,
+                onAddClick = onAddPlayer,
+                currentCount = lobbyPlayers.size
+            )
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            LobbyPlayersCounter(currentCount = lobbyPlayers.size)
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            LobbyPlayersListSection(
+                lobbyPlayers = lobbyPlayers,
+                onRemovePlayer = onRemovePlayer
+            )
+        }
+
+        Spacer(modifier = Modifier.height(24.dp))
+
+        StartGameButton(
+            playerCount = lobbyPlayers.size,
+            onStartGame = onStartGame
+        )
+    }
+}
+
+@Composable
+fun LobbyHeader() {
+    Text(
+        text = "СВИНТУС",
+        fontSize = 32.sp,
+        fontWeight = FontWeight.Black,
+        color = Color(0xFFFF6B00),
+        letterSpacing = 2.sp,
+        modifier = Modifier.fillMaxWidth(),
+        textAlign = TextAlign.Center
+    )
+    Text(
+        text = "ПОДГОТОВКА К БИТВЕ",
+        fontSize = 11.sp,
+        fontWeight = FontWeight.Bold,
+        color = Color(0xFF94A3B8),
+        letterSpacing = 4.sp,
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(bottom = 24.dp),
+        textAlign = TextAlign.Center
+    )
+}
+
+@Composable
+fun PlayerInputField(
+    value: String,
+    onValueChange: (String) -> Unit,
+    onAddClick: () -> Unit,
+    currentCount: Int
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        NameInputField(value = value, onValueChange = onValueChange)
+
+        Spacer(modifier = Modifier.width(12.dp))
+
+        AddPlayerButton(
+            isEnabled = value.isNotBlank() && currentCount < 8,
+            onClick = onAddClick
+        )
+    }
+}
+
+@Composable
+fun RowScope.NameInputField(value: String, onValueChange: (String) -> Unit) {
+    OutlinedTextField(
+        value = value,
+        onValueChange = onValueChange,
+        label = { Text("Имя нового игрока", color = Color(0xFF94A3B8)) },
+        colors = TextFieldDefaults.outlinedTextFieldColors(
+            textColor = Color(0xFFE2E8F0),
+            focusedBorderColor = Color(0xFFFF6B00),
+            unfocusedBorderColor = Color(0xFF334155),
+            cursorColor = Color(0xFFFF6B00),
+            focusedLabelColor = Color(0xFFFF6B00)
+        ),
+        shape = RoundedCornerShape(12.dp),
+        modifier = Modifier.weight(1f),
+        singleLine = true
+    )
+}
+
+@Composable
+fun AddPlayerButton(isEnabled: Boolean, onClick: () -> Unit) {
+    Button(
+        onClick = onClick,
+        enabled = isEnabled,
+        colors = ButtonDefaults.buttonColors(
+            backgroundColor = Color(0xFFFF6B00),
+            contentColor = Color.White,
+            disabledBackgroundColor = Color(0xFF334155)
+        ),
+        shape = RoundedCornerShape(12.dp),
+        modifier = Modifier.size(56.dp),
+        contentPadding = PaddingValues(0.dp)
+    ) {
+        Icon(Icons.Default.Add, contentDescription = "Добавить")
+    }
+}
+
+@Composable
+fun LobbyPlayersCounter(currentCount: Int) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            text = "Участники лобби",
+            fontSize = 16.sp,
+            fontWeight = FontWeight.Bold,
+            color = Color(0xFFE2E8F0)
+        )
+        Text(
+            text = "$currentCount / 8",
+            fontSize = 14.sp,
+            fontWeight = FontWeight.Bold,
+            color = if (currentCount >= 2) Color(0xFFFF6B00) else Color(0xFF94A3B8)
+        )
+    }
+}
+
+@Composable
+fun ColumnScope.LobbyPlayersListSection(
+    lobbyPlayers: List<PlayerProfile>,
+    onRemovePlayer: (PlayerProfile) -> Unit
+) {
+    if (lobbyPlayers.isEmpty()) {
+        EmptyLobbyStub()
+    } else {
+        PlayersLazyColumn(lobbyPlayers = lobbyPlayers, onRemovePlayer = onRemovePlayer)
+    }
+}
+
+@Composable
+fun ColumnScope.PlayersLazyColumn(
+    lobbyPlayers: List<PlayerProfile>,
+    onRemovePlayer: (PlayerProfile) -> Unit
+) {
+    LazyColumn(
+        modifier = Modifier.weight(1f),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        items(lobbyPlayers) { player ->
+            PlayerLobbyRow(player = player, onRemovePlayer = onRemovePlayer)
+        }
+    }
+}
+
+@Composable
+fun ColumnScope.EmptyLobbyStub() {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .weight(1f),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            text = "Добавьте минимум 2 игроков, чтобы начать игру",
+            color = Color(0xFF94A3B8),
+            fontSize = 14.sp,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.padding(horizontal = 16.dp)
+        )
+    }
+}
+
+@Composable
+fun PlayerLobbyRow(player: PlayerProfile, onRemovePlayer: (PlayerProfile) -> Unit) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(Color(0xFF263147), RoundedCornerShape(12.dp))
+            .border(1.dp, Color(0xFF2D3A54), RoundedCornerShape(12.dp))
+            .padding(horizontal = 16.dp, vertical = 12.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        PlayerInfoLabel(username = player.username)
+        DeletePlayerButton(onClick = { onRemovePlayer(player) })
+    }
+}
+
+@Composable
+fun PlayerInfoLabel(username: String) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Icon(
+            Icons.Default.Person,
+            contentDescription = null,
+            tint = Color(0xFFFF6B00),
+            modifier = Modifier.size(20.dp)
+        )
+        Spacer(modifier = Modifier.width(12.dp))
+        Text(
+            text = username,
+            color = Color(0xFFE2E8F0),
+            fontWeight = FontWeight.Medium,
+            fontSize = 15.sp
+        )
+    }
+}
+
+@Composable
+fun DeletePlayerButton(onClick: () -> Unit) {
+    IconButton(
+        onClick = onClick,
+        modifier = Modifier.size(24.dp)
+    ) {
+        Icon(
+            Icons.Default.Delete,
+            contentDescription = "Удалить",
+            tint = Color(0xFFEF4444)
+        )
+    }
+}
+
+@Composable
+fun StartGameButton(playerCount: Int, onStartGame: () -> Unit) {
+    val isButtonEnabled = playerCount >= 2
+
+    Button(
+        onClick = onStartGame,
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(54.dp),
+        enabled = isButtonEnabled,
+        shape = RoundedCornerShape(14.dp),
+        colors = ButtonDefaults.buttonColors(
+            backgroundColor = Color.Transparent,
+            disabledBackgroundColor = Color(0xFF334155)
+        ),
+        contentPadding = PaddingValues(0.dp)
+    ) {
+        StartGameButtonContent(isButtonEnabled = isButtonEnabled)
+    }
+}
+
+@Composable
+fun StartGameButtonContent(isButtonEnabled: Boolean) {
+    val buttonModifier = if (isButtonEnabled) {
+        Modifier
+            .fillMaxSize()
+            .background(Brush.horizontalGradient(listOf(Color(0xFFFF6B00), Color(0xFFFF8833))))
+    } else {
+        Modifier
+            .fillMaxSize()
+            .background(Color(0xFF334155))
+    }
+
+    Box(
+        modifier = buttonModifier,
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            text = "ПОЕХАЛИ!",
+            fontSize = 16.sp,
+            fontWeight = FontWeight.Black,
+            color = if (isButtonEnabled) Color.White else Color(0xFF94A3B8),
+            letterSpacing = 2.sp
+        )
     }
 }
