@@ -7,7 +7,8 @@ import view.screens.LobbyScreen
 import viewmodel.SwintusViewModel
 
 @Composable
-fun Application(viewModel: SwintusViewModel) {
+fun Application() {
+    val viewModel = remember { SwintusViewModel() }
     val gameState by viewModel.gameState.collectAsState()
 
     LaunchedEffect(viewModel) {

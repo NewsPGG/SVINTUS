@@ -4,14 +4,12 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.filled.Star
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -30,14 +28,6 @@ import java.util.UUID
 fun LobbyScreen(viewModel: SwintusViewModel) {
     val lobbyPlayers = remember { mutableStateListOf<PlayerProfile>() }
     var newPlayerName by remember { mutableStateOf("") }
-    var selectedTab by remember { mutableStateOf(0) }
-    var leaderboardData by remember { mutableStateOf(listOf<PlayerProfile>()) }
-
-    LaunchedEffect(Unit, selectedTab) {
-        if (selectedTab == 1) {
-            leaderboardData = viewModel.loadLeaderboard()
-        }
-    }
 
     Box(
         modifier = Modifier
@@ -51,92 +41,39 @@ fun LobbyScreen(viewModel: SwintusViewModel) {
             backgroundColor = Color(0xFF1E2638),
             elevation = 16.dp,
             modifier = Modifier
-                .width(520.dp)
-                .height(620.dp)
+                .width(480.dp)
+                .height(580.dp)
                 .border(1.dp, Color(0xFF334155), RoundedCornerShape(24.dp))
         ) {
-            Column(modifier = Modifier.fillMaxSize().padding(32.dp)) {
-                LobbyHeader()
-
-                LobbyTabSelector(selectedTab) { selectedTab = it }
-
-                Spacer(modifier = Modifier.height(24.dp))
-
-                Box(modifier = Modifier.weight(1f)) {
-                    if (selectedTab == 0) {
-                        LobbySetupContent(
-                            lobbyPlayers = lobbyPlayers,
-                            newPlayerName = newPlayerName,
-                            onNameChange = { newPlayerName = it },
-                            onAddPlayer = {
-                                if (newPlayerName.isNotBlank() && lobbyPlayers.size < 8) {
-                                    lobbyPlayers.add(PlayerProfile(UUID.randomUUID(), newPlayerName.trim(), 0, 0, 0))
-                                    newPlayerName = ""
-                                }
-                            },
-                            onRemovePlayer = { lobbyPlayers.remove(it) },
-                            onStartGame = {
-                                val administrator = GameAdministrator()
-                                administrator.startGame(lobbyPlayers.toList())
-                                viewModel.startGameFromLobby(administrator.gameState)
-                            }
+            LobbyCardContent(
+                lobbyPlayers = lobbyPlayers,
+                newPlayerName = newPlayerName,
+                onNameChange = { newPlayerName = it },
+                onAddPlayer = {
+                    lobbyPlayers.add(
+                        PlayerProfile(
+                            id = UUID.randomUUID(),
+                            username = newPlayerName.trim(),
+                            rating = 0,
+                            gamesPlayed = 0,
+                            wins = 0
                         )
-                    } else {
-                        LeaderboardContent(leaderboardData)
-                    }
+                    )
+                    newPlayerName = ""
+                },
+                onRemovePlayer = { lobbyPlayers.remove(it) },
+                onStartGame = {
+                    val administrator = GameAdministrator()
+                    administrator.startGame(lobbyPlayers.toList())
+                    viewModel.startGameFromLobby(administrator.gameState)
                 }
-            }
-        }
-    }
-}
-
-@Composable
-fun LobbyTabSelector(selectedTab: Int, onTabSelected: (Int) -> Unit) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(44.dp)
-            .background(Color(0xFF121824), RoundedCornerShape(12.dp))
-            .padding(4.dp)
-    ) {
-        TabItem(
-            text = "БИТВА",
-            isSelected = selectedTab == 0,
-            modifier = Modifier.weight(1f),
-            onClick = { onTabSelected(0) }
-        )
-        TabItem(
-            text = "ТОП ИГРОКОВ",
-            isSelected = selectedTab == 1,
-            modifier = Modifier.weight(1f),
-            onClick = { onTabSelected(1) }
-        )
-    }
-}
-
-@OptIn(ExperimentalMaterialApi::class)
-@Composable
-fun TabItem(text: String, isSelected: Boolean, modifier: Modifier, onClick: () -> Unit) {
-    Surface(
-        onClick = onClick,
-        modifier = modifier.fillMaxHeight(),
-        shape = RoundedCornerShape(8.dp),
-        color = if (isSelected) Color(0xFF2D3A54) else Color.Transparent
-    ) {
-        Box(contentAlignment = Alignment.Center) {
-            Text(
-                text = text,
-                color = if (isSelected) Color(0xFFFF6B00) else Color(0xFF94A3B8),
-                fontSize = 12.sp,
-                fontWeight = FontWeight.Bold,
-                letterSpacing = 1.sp
             )
         }
     }
 }
 
 @Composable
-fun LobbySetupContent(
+fun LobbyCardContent(
     lobbyPlayers: List<PlayerProfile>,
     newPlayerName: String,
     onNameChange: (String) -> Unit,
@@ -144,76 +81,39 @@ fun LobbySetupContent(
     onRemovePlayer: (PlayerProfile) -> Unit,
     onStartGame: () -> Unit
 ) {
-    Column(modifier = Modifier.fillMaxSize()) {
-        PlayerInputField(
-            value = newPlayerName,
-            onValueChange = onNameChange,
-            onAddClick = onAddPlayer,
-            currentCount = lobbyPlayers.size
-        )
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(32.dp),
+        verticalArrangement = Arrangement.SpaceBetween
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            LobbyHeader()
+
+            PlayerInputField(
+                value = newPlayerName,
+                onValueChange = onNameChange,
+                onAddClick = onAddPlayer,
+                currentCount = lobbyPlayers.size
+            )
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            LobbyPlayersCounter(currentCount = lobbyPlayers.size)
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            LobbyPlayersListSection(
+                lobbyPlayers = lobbyPlayers,
+                onRemovePlayer = onRemovePlayer
+            )
+        }
 
         Spacer(modifier = Modifier.height(24.dp))
-        LobbyPlayersCounter(currentCount = lobbyPlayers.size)
-        Spacer(modifier = Modifier.height(12.dp))
 
-        Box(modifier = Modifier.weight(1f)) {
-            Column(modifier = Modifier.fillMaxSize()) {
-                LobbyPlayersListSection(lobbyPlayers, onRemovePlayer)
-            }
-        }
-
-        Spacer(modifier = Modifier.height(16.dp))
-        StartGameButton(playerCount = lobbyPlayers.size, onStartGame = onStartGame)
-    }
-}
-
-@Composable
-fun LeaderboardContent(leaderboard: List<PlayerProfile>) {
-    if (leaderboard.isEmpty()) {
-        EmptyLeaderboardStub()
-    } else {
-        Column(modifier = Modifier.fillMaxSize()) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 8.dp)
-                    .padding(bottom = 8.dp),
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Text("ИГРОК", modifier = Modifier.weight(2f), color = Color(0xFF94A3B8), fontSize = 10.sp, fontWeight = FontWeight.Bold)
-                Text("LP", modifier = Modifier.weight(1f), color = Color(0xFF94A3B8), fontSize = 10.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
-                Text("ПОБЕДЫ", modifier = Modifier.weight(1f), color = Color(0xFF94A3B8), fontSize = 10.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.End)
-            }
-
-            LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                items(leaderboard.sortedByDescending { it.rating }) { player ->
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .background(Color(0xFF263147), RoundedCornerShape(12.dp))
-                            .padding(16.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Icon(Icons.Default.Star, null, tint = Color(0xFFFFD700), modifier = Modifier.size(16.dp))
-                        Spacer(Modifier.width(12.dp))
-                        Text(player.username, modifier = Modifier.weight(2f), color = Color.White, fontWeight = FontWeight.Medium)
-                        Text("${player.rating}", modifier = Modifier.weight(1f), color = Color(0xFFFF6B00), fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
-                        Text("${player.wins}", modifier = Modifier.weight(1f), color = Color.White, textAlign = TextAlign.End)
-                    }
-                }
-            }
-        }
-    }
-}
-
-@Composable
-fun EmptyLeaderboardStub() {
-    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        Text(
-            "История пуста.\nСыграйте первую партию!",
-            color = Color(0xFF94A3B8),
-            textAlign = TextAlign.Center,
-            lineHeight = 20.sp
+        StartGameButton(
+            playerCount = lobbyPlayers.size,
+            onStartGame = onStartGame
         )
     }
 }

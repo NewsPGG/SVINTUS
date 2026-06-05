@@ -3,10 +3,6 @@ package viewmodel
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateMapOf
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.launch
 import Game.GameState
 import Game.GameStateLogic
 import Cards.Card
@@ -15,18 +11,14 @@ import Cards.Types.NumberCard
 import Cards.Types.WildCard
 import Validator.TurnActions.PlayCardTurn
 import Validator.TurnActions.DrawCardTurn
-import Application.PlayerProfile
-import data.repository.GameRepository
 import java.util.UUID
 
-class SwintusViewModel(private val repository: GameRepository) {
+class SwintusViewModel {
 
     val gameState = MutableStateFlow<GameState?>(null)
     val stateVersion = MutableStateFlow(0)
     val actionLogs = mutableStateListOf<String>("Игра началась.")
     private val forgottenSwintusTurns = mutableStateMapOf<UUID, Int>()
-
-    private val viewModelScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
 
     var onResetToLobby: (() -> Unit)? = null
 
@@ -93,19 +85,6 @@ class SwintusViewModel(private val repository: GameRepository) {
         forgottenSwintusTurns.remove(targetPlayerId)
         updateVersion()
         return null
-    }
-
-    fun handleGameEnd(winnerId: UUID, winnerName: String, totalTurns: Int, profiles: List<PlayerProfile>) {
-        viewModelScope.launch {
-            repository.saveGameResult(winnerId, winnerName, totalTurns, profiles)
-        }
-    }
-
-    fun loadLeaderboard(onLoaded: (List<PlayerProfile>) -> Unit) {
-        viewModelScope.launch {
-            val list = repository.loadLeaderboard()
-            onLoaded(list)
-        }
     }
 
     fun resetToLobby() {
@@ -203,9 +182,5 @@ class SwintusViewModel(private val repository: GameRepository) {
         if (this is NumberCard && topCard is NumberCard) return this.value == topCard.value
         if (this is ActionCard && topCard is ActionCard) return this.effect::class == topCard.effect::class
         return false
-    }
-
-    suspend fun loadLeaderboard(): List<PlayerProfile> {
-        return repository.loadLeaderboard()
     }
 }
